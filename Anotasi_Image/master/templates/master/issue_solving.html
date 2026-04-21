@@ -1,0 +1,407 @@
+{% extends 'base_master.html' %}
+{% block content %}
+{% csrf_token %}
+
+<div class="space-y-6">
+
+    <!-- ====================================================
+         HEADER
+         ==================================================== -->
+    <div>
+        <h1 class="text-xl md:text-2xl lg:text-3xl font-bold">Issue Solving</h1>
+        <p class="text-sm text-gray-500 mt-1">Review & selesaikan issue yang di-flag reviewer</p>
+    </div>
+
+    <!-- ====================================================
+         STATS CARDS
+         ==================================================== -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+            <div class="text-xs text-gray-500 uppercase">Total Jobs</div>
+            <div class="text-2xl font-bold mt-1">{{ jobs|length }}</div>
+        </div>
+        <div class="bg-red-50 p-4 rounded-lg shadow-sm border border-red-200">
+            <div class="text-xs text-red-700 uppercase">Jobs With Issues</div>
+            <div class="text-2xl font-bold mt-1 text-red-700" id="statJobsWithIssues">0</div>
+        </div>
+        <div class="bg-yellow-50 p-4 rounded-lg shadow-sm border border-yellow-200">
+            <div class="text-xs text-yellow-700 uppercase">Total Issues</div>
+            <div class="text-2xl font-bold mt-1 text-yellow-700" id="statTotalIssues">0</div>
+        </div>
+        <div class="bg-green-50 p-4 rounded-lg shadow-sm border border-green-200">
+            <div class="text-xs text-green-700 uppercase">Jobs Clean</div>
+            <div class="text-2xl font-bold mt-1 text-green-700" id="statJobsClean">0</div>
+        </div>
+    </div>
+
+    <!-- ====================================================
+         FILTER BAR
+         ==================================================== -->
+    <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100 flex flex-col md:flex-row gap-3">
+        <input type="text" id="searchInput"
+               placeholder="Cari job by title..."
+               class="flex-1 p-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <div class="flex flex-wrap gap-2">
+            <button class="filter-chip active px-3 py-1 rounded-full text-sm border" data-filter="all">Semua</button>
+            <button class="filter-chip px-3 py-1 rounded-full text-sm border" data-filter="has_issues">Ada Issue</button>
+            <button class="filter-chip px-3 py-1 rounded-full text-sm border" data-filter="clean">Clean</button>
+        </div>
+    </div>
+
+    <!-- ====================================================
+         JOB LIST
+         ==================================================== -->
+    <div id="jobListContainer" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {% for job in jobs %}
+        <div class="job-card bg-white p-4 md:p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow
+                    {% if job.issues_count > 0 %}ring-2 ring-red-200{% endif %}"
+             data-job-id="{{ job.id }}"
+             data-job-title="{{ job.title|lower }}"
+             data-issues-count="{{ job.issues_count }}">
+
+            <div class="flex flex-col sm:flex-row sm:items-start sm:space-x-4 space-y-3 sm:space-y-0 mb-4">
+                <div class="w-full sm:w-20 md:w-24 h-20 md:h-24 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0 relative">
+                    {% if job.first_image_url %}
+                        <img src="{{ job.first_image_url }}" alt="{{ job.title }}" class="w-full h-full object-cover">
+                    {% endif %}
+                    {% if job.issues_count > 0 %}
+                        <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center shadow">
+                            {{ job.issues_count }}
+                        </span>
+                    {% endif %}
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h4 class="text-base md:text-lg font-semibold truncate">{{ job.title }}</h4>
+                    <div class="space-y-1 mt-2 text-sm text-gray-500">
+                        <!-- Progress bar -->
+                        <div class="flex items-center gap-2">
+                            <div class="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
+                                <div class="bg-green-500 h-full" style="width: {{ job.progress_percentage }}%"></div>
+                            </div>
+                            <span class="text-xs font-medium text-gray-700">{{ job.progress_percentage }}%</span>
+                        </div>
+                        <p class="flex justify-between">
+                            <span>Annotator:</span>
+                            <span class="text-right truncate max-w-40">{{ job.worker_annotator.email|default:'-' }}</span>
+                        </p>
+                        <p class="flex justify-between">
+                            <span>Reviewer:</span>
+                            <span class="text-right truncate max-w-40">{{ job.worker_reviewer.email|default:'-' }}</span>
+                        </p>
+                        <p class="flex justify-between items-center">
+                            <span>Issues:</span>
+                            {% if job.issues_count > 0 %}
+                                <span class="bg-red-100 text-red-700 px-2 py-0.5 rounded-full text-xs font-semibold">
+                                    {{ job.issues_count }} issue(s)
+                                </span>
+                            {% else %}
+                                <span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs">Clean ✓</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="border-t pt-3">
+                <button onclick="viewIssues({{ job.id }}, '{{ job.title|escapejs }}')"
+                        class="w-full {% if job.issues_count > 0 %}bg-red-500 hover:bg-red-600{% else %}bg-gray-400 hover:bg-gray-500{% endif %} text-white px-4 py-2 rounded-lg text-sm font-medium transition"
+                        {% if job.issues_count == 0 %}disabled{% endif %}>
+                    {% if job.issues_count > 0 %}
+                        View {{ job.issues_count }} Issue(s) →
+                    {% else %}
+                        No Issues
+                    {% endif %}
+                </button>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-full bg-white p-8 rounded-lg shadow-md text-center text-gray-500">
+            <p class="font-medium">Belum ada job</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div id="noResultsMessage" class="hidden bg-white p-8 rounded-lg shadow-md text-center text-gray-500">
+        Tidak ada job yang cocok dengan filter
+    </div>
+</div>
+
+<!-- ====================================================
+     MODAL: Issue Detail — tampilin image yang di-flag
+     ==================================================== -->
+<div id="issueModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-lg w-full max-w-6xl max-h-[90vh] overflow-y-auto relative">
+        <div class="p-6 md:p-8">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold" id="issueModalTitle">Issues</h2>
+                    <p class="text-sm text-gray-500 mt-1" id="issueModalSubtitle"></p>
+                </div>
+                <button type="button" class="text-gray-500 hover:text-gray-700"
+                        onclick="closeModal('issueModal')">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Loading state -->
+            <div id="issueModalLoading" class="py-12 text-center text-gray-500">
+                <svg class="animate-spin mx-auto h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <p class="mt-3">Loading issues...</p>
+            </div>
+
+            <!-- Stats (from issue_detail response) -->
+            <div id="issueModalStats" class="hidden grid grid-cols-3 md:grid-cols-5 gap-2 mb-6">
+                <div class="bg-gray-50 p-3 rounded-lg text-center">
+                    <div class="text-xl font-bold" id="statUnannotated">0</div>
+                    <div class="text-xs text-gray-500">Unannotated</div>
+                </div>
+                <div class="bg-yellow-50 p-3 rounded-lg text-center">
+                    <div class="text-xl font-bold text-yellow-700" id="statInReview">0</div>
+                    <div class="text-xs text-yellow-700">In Review</div>
+                </div>
+                <div class="bg-orange-50 p-3 rounded-lg text-center">
+                    <div class="text-xl font-bold text-orange-700" id="statInRework">0</div>
+                    <div class="text-xs text-orange-700">In Rework</div>
+                </div>
+                <div class="bg-red-50 p-3 rounded-lg text-center">
+                    <div class="text-xl font-bold text-red-700" id="statIssues">0</div>
+                    <div class="text-xs text-red-700">Issues</div>
+                </div>
+                <div class="bg-green-50 p-3 rounded-lg text-center">
+                    <div class="text-xl font-bold text-green-700" id="statFinished">0</div>
+                    <div class="text-xs text-green-700">Finished</div>
+                </div>
+            </div>
+
+            <!-- Images with issues grid -->
+            <div id="issueImagesContainer" class="hidden space-y-4"></div>
+
+            <!-- No issues -->
+            <div id="issueModalEmpty" class="hidden py-12 text-center">
+                <svg class="mx-auto h-16 w-16 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <p class="mt-3 font-medium text-gray-700">Semua image di job ini udah clean!</p>
+                <p class="text-sm text-gray-500 mt-1">Gak ada issue yang perlu di-handle.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .filter-chip { background: white; border-color: #d1d5db; color: #374151; transition: all 0.15s; }
+    .filter-chip:hover { background: #f3f4f6; }
+    .filter-chip.active { background: #4527A0; color: white; border-color: #4527A0; }
+
+    #issueModal.flex { display: flex !important; }
+</style>
+
+<script>
+function getCSRF() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
+
+function closeModal(id) {
+    const m = document.getElementById(id);
+    m.classList.add('hidden');
+    m.classList.remove('flex');
+    document.body.style.overflow = 'auto';
+}
+
+function openModal(id) {
+    const m = document.getElementById(id);
+    m.classList.remove('hidden');
+    m.classList.add('flex');
+    document.body.style.overflow = 'hidden';
+}
+
+// =========================================================
+// INIT STATS & FILTER
+// =========================================================
+document.addEventListener('DOMContentLoaded', function () {
+    const cards = document.querySelectorAll('.job-card');
+    let jobsWithIssues = 0, totalIssues = 0, jobsClean = 0;
+    cards.forEach(c => {
+        const n = parseInt(c.dataset.issuesCount || '0');
+        totalIssues += n;
+        if (n > 0) jobsWithIssues++;
+        else jobsClean++;
+    });
+    document.getElementById('statJobsWithIssues').textContent = jobsWithIssues;
+    document.getElementById('statTotalIssues').textContent = totalIssues;
+    document.getElementById('statJobsClean').textContent = jobsClean;
+
+    // Filter & search
+    const searchInput = document.getElementById('searchInput');
+    const chips = document.querySelectorAll('.filter-chip');
+    let activeFilter = 'all', searchQuery = '';
+
+    function applyFilter() {
+        let visible = 0;
+        cards.forEach(card => {
+            const title = card.dataset.jobTitle || '';
+            const issuesCount = parseInt(card.dataset.issuesCount || '0');
+            let matchFilter = true;
+            if (activeFilter === 'has_issues') matchFilter = issuesCount > 0;
+            else if (activeFilter === 'clean') matchFilter = issuesCount === 0;
+            const matchSearch = !searchQuery || title.includes(searchQuery);
+            if (matchFilter && matchSearch) { card.style.display = ''; visible++; }
+            else card.style.display = 'none';
+        });
+        document.getElementById('noResultsMessage').classList.toggle('hidden', visible > 0 || cards.length === 0);
+    }
+
+    searchInput.addEventListener('input', e => { searchQuery = e.target.value.toLowerCase(); applyFilter(); });
+    chips.forEach(chip => {
+        chip.addEventListener('click', () => {
+            chips.forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+            activeFilter = chip.dataset.filter;
+            applyFilter();
+        });
+    });
+
+    // Close modal bg click
+    document.getElementById('issueModal').addEventListener('click', function(e) {
+        if (e.target === this) closeModal('issueModal');
+    });
+});
+
+// =========================================================
+// VIEW ISSUES — fetch dari /issue-detail/<id>/ & render
+// =========================================================
+function viewIssues(jobId, jobTitle) {
+    // Open modal + loading state
+    document.getElementById('issueModalTitle').textContent = 'Issues in: ' + jobTitle;
+    document.getElementById('issueModalSubtitle').textContent = 'Loading...';
+    document.getElementById('issueModalLoading').classList.remove('hidden');
+    document.getElementById('issueModalStats').classList.add('hidden');
+    document.getElementById('issueImagesContainer').classList.add('hidden');
+    document.getElementById('issueModalEmpty').classList.add('hidden');
+    openModal('issueModal');
+
+    fetch(`/issue-detail/${jobId}/`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json', 'X-CSRFToken': getCSRF() }
+    })
+    .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+    .then(data => {
+        document.getElementById('issueModalLoading').classList.add('hidden');
+
+        // Populate stats
+        const sc = data.status_counts || {};
+        document.getElementById('statUnannotated').textContent = sc.unannotated || 0;
+        document.getElementById('statInReview').textContent = sc.in_review || 0;
+        document.getElementById('statInRework').textContent = sc.in_rework || 0;
+        document.getElementById('statIssues').textContent = sc.issues || 0;
+        document.getElementById('statFinished').textContent = sc.finished || 0;
+        document.getElementById('issueModalStats').classList.remove('hidden');
+
+        // Filter images dengan status = 'Issue'
+        const issueImages = (data.images || []).filter(img => img.status === 'Issue');
+        document.getElementById('issueModalSubtitle').textContent =
+            issueImages.length + ' image(s) flagged as issue';
+
+        if (issueImages.length === 0) {
+            document.getElementById('issueModalEmpty').classList.remove('hidden');
+            return;
+        }
+
+        const container = document.getElementById('issueImagesContainer');
+        container.innerHTML = issueImages.map(img => renderIssueCard(img)).join('');
+        container.classList.remove('hidden');
+    })
+    .catch(err => {
+        console.error(err);
+        document.getElementById('issueModalLoading').classList.add('hidden');
+        document.getElementById('issueImagesContainer').classList.remove('hidden');
+        document.getElementById('issueImagesContainer').innerHTML =
+            '<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">Error loading issues: ' + err.message + '</div>';
+    });
+}
+
+function renderIssueCard(img) {
+    // Note: img.id gak ada di response, pake filename sebagai identifier visual.
+    // Untuk finish-image kita butuh image_id — kalau backend gak kirim id, ini perlu di-update di backend.
+    return `
+        <div class="border rounded-lg p-4 bg-gray-50">
+            <div class="flex flex-col md:flex-row gap-4">
+                <div class="md:w-64 flex-shrink-0">
+                    <div class="aspect-square bg-gray-200 rounded-lg overflow-hidden">
+                        <img src="${img.url}" alt="${img.filename}" class="w-full h-full object-cover">
+                    </div>
+                    <div class="text-xs text-gray-500 mt-2 truncate">${img.filename}</div>
+                </div>
+                <div class="flex-1 space-y-3">
+                    <div>
+                        <div class="text-xs text-gray-500 uppercase">Annotator</div>
+                        <div class="font-medium">${img.annotator || 'Unassigned'}</div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-gray-500 uppercase">Issue Description</div>
+                        <div class="text-sm mt-1 p-3 bg-red-50 border border-red-200 rounded-lg text-red-800">
+                            ${img.issue_description || 'No description provided'}
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-gray-500 uppercase">Annotations</div>
+                        <div class="text-sm mt-1">${(img.annotations || []).length} annotation(s)</div>
+                    </div>
+                    <div class="flex gap-2 pt-2 border-t">
+                        ${img.image_id ? `
+                            <button onclick="finishImage(${img.image_id}, this)"
+                                    class="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                                ✓ Mark as Fixed
+                            </button>
+                        ` : `
+                            <button disabled class="flex-1 bg-gray-300 text-gray-500 px-4 py-2 rounded-lg text-sm cursor-not-allowed">
+                                (image_id missing from backend)
+                            </button>
+                        `}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Mark image as fixed (finished)
+function finishImage(imageId, btn) {
+    if (!confirm('Mark image ini sebagai FIXED? Status akan jadi finished.')) return;
+
+    btn.disabled = true;
+    btn.textContent = 'Processing...';
+
+    fetch("{% url 'master:finish_image' %}", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRF() },
+        body: JSON.stringify({ image_id: imageId })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === 'success') {
+            btn.closest('.border.rounded-lg').style.opacity = '0.5';
+            btn.textContent = '✓ Fixed';
+            btn.className = 'flex-1 bg-gray-400 text-white px-4 py-2 rounded-lg text-sm font-medium cursor-not-allowed';
+            alert('Image marked as fixed!');
+        } else {
+            alert('Error: ' + (data.message || 'unknown'));
+            btn.disabled = false;
+            btn.textContent = '✓ Mark as Fixed';
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert('Network error: ' + err.message);
+        btn.disabled = false;
+        btn.textContent = '✓ Mark as Fixed';
+    });
+}
+</script>
+
+{% endblock %}

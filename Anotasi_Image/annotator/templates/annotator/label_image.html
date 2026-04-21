@@ -1,0 +1,238 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Labeling Image</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 font-sans text-sm">
+  <div class="bg-blue-900 text-white px-6 py-3 flex items-center justify-between">
+    <div class="flex items-center">
+      <a href="{% url 'annotator:job_detail' job.id %}" class="mr-3 text-white hover:text-gray-200 transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+        </svg>
+      </a>
+      <strong>{{ job.title }}</strong> &gt; Labeling &gt;
+      <span class="text-gray-200">{{ image.image.name|default:"Image" }}</span>
+    </div>
+  </div>
+
+  <div class="bg-white border-b px-6 py-3 flex justify-between items-center">
+    <div class="flex items-center gap-2">
+      <button class="px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded" onclick="navigateImage('prev')">&lt;</button>
+      <span class="font-medium">{{ current_image_index }} / {{ total_image }}</span>
+      <button class="px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded" onclick="navigateImage('next')">&gt;</button>
+    </div>
+    <div class="flex items-center gap-2">
+      <button class="bg-blue-600 text-white px-4 py-1 rounded hover:bg-blue-700 text-sm" onclick="finishAnnotation()">Finish</button>
+      <button id="labelStatusBtn" class="inline-block text-xs px-3 py-1 rounded cursor-pointer bg-red-500 text-white transition" onclick="toggleLabelStatus()">
+        Label Assist 🔴
+      </button>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-7 gap-4 px-6 py-4 text-center">
+    <div class="bg-gray-100 p-3 rounded shadow"><div class="text-xl font-bold">{{ status_counts.unannotated }}</div><div class="text-gray-500 text-sm">Unannotated</div></div>
+    <div class="bg-yellow-100 p-3 rounded shadow"><div class="text-xl font-bold">{{ status_counts.in_progress }}</div><div class="text-gray-500 text-sm">In Progress</div></div>
+    <div class="bg-blue-100 p-3 rounded shadow"><div class="text-xl font-bold">{{ status_counts.annotated }}</div><div class="text-gray-500 text-sm">Annotated</div></div>
+    <div class="bg-purple-100 p-3 rounded shadow"><div class="text-xl font-bold">{{ status_counts.in_review }}</div><div class="text-gray-500 text-sm">In Review</div></div>
+    <div class="bg-orange-100 p-3 rounded shadow"><div class="text-xl font-bold">{{ status_counts.in_rework }}</div><div class="text-gray-500 text-sm">In Rework</div></div>
+    <div class="bg-green-100 p-3 rounded shadow"><div class="text-xl font-bold">{{ status_counts.finished }}</div><div class="text-gray-500 text-sm">Finished</div></div>
+    <div class="bg-red-100 p-3 rounded shadow"><div class="text-xl font-bold">{{ status_counts.issue }}</div><div class="text-gray-500 text-sm">Issue</div></div>
+  </div>
+
+  <div class="flex gap-4 px-6 pb-10">
+    <div class="w-1/4 bg-white rounded shadow p-4">
+      <h2 class="text-sm font-semibold mb-2 text-gray-700">Annotations</h2>
+      <input type="text" placeholder="Search class..." class="w-full px-2 py-1 border rounded text-sm mb-4">
+      <ul id="classesList" class="space-y-1">
+        {% for cls in classes %}
+          <li class="px-2 py-1 bg-gray-100 border rounded text-gray-700 text-sm capitalize">{{ cls }}</li>
+        {% empty %}
+          <li class="px-2 py-1 bg-gray-50 border rounded text-gray-500 text-sm">No classes yet</li>
+        {% endfor %}
+      </ul>
+
+      <div class="mt-6">
+        <h3 class="text-xs text-gray-500 font-semibold uppercase border-b pb-1">Job Segmentation Type</h3>
+        <div class="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm">
+          <div class="font-medium text-blue-800">{{ job.segmentation_type|title }}</div>
+          <div class="text-xs text-blue-600 mt-1">Set by Master for this job</div>
+        </div>
+        {% if job.segmentation_type == 'semantic' %}
+          <div class="mt-2 text-xs text-gray-600"><strong>Instructions:</strong> Label each pixel region by class.</div>
+        {% elif job.segmentation_type == 'instance' %}
+          <div class="mt-2 text-xs text-gray-600"><strong>Instructions:</strong> Label each individual object separately.</div>
+        {% elif job.segmentation_type == 'panoptic' %}
+          <div class="mt-2 text-xs text-gray-600"><strong>Instructions:</strong> Combine semantic and instance labeling.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="relative w-3/4 bg-white rounded shadow p-4 flex flex-col items-center">
+      {% if image.image %}
+        <img id="labelingImage" src="{{ image.image.url }}" alt="Image to label" class="max-w-full max-h-[75vh] border rounded" />
+        <canvas id="annotationsCanvas" class="absolute pointer-events-none"></canvas>
+        <p class="mt-2 text-xs text-gray-400 break-all">URL: {{ image.image.url }}</p>
+      {% else %}
+        <p class="text-red-500 text-sm">Image is not available.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <script>
+    function navigateImage(direction) {
+      const prevImageId = {{ prev_image_id|default:'null' }};
+      const nextImageId = {{ next_image_id|default:'null' }};
+      let targetImageId = null;
+      if (direction === 'prev' && prevImageId) targetImageId = prevImageId;
+      if (direction === 'next' && nextImageId) targetImageId = nextImageId;
+      if (targetImageId) {
+        window.location.href = `{% url 'annotator:label_image' job.id 0 %}`.replace('0', targetImageId);
+      }
+    }
+
+    function updateSidebarClasses(allAnnotations) {
+      const classes = [...new Set(allAnnotations.map(ann => ann.label).filter(Boolean))].sort();
+      const classesList = document.getElementById('classesList');
+      if (!classesList) return;
+      classesList.innerHTML = '';
+      if (!classes.length) {
+        classesList.innerHTML = '<li class="px-2 py-1 bg-gray-50 border rounded text-gray-500 text-sm">No classes yet</li>';
+        return;
+      }
+      classes.forEach(cls => {
+        const li = document.createElement('li');
+        li.className = 'px-2 py-1 bg-gray-100 border rounded text-gray-700 text-sm capitalize';
+        li.textContent = cls;
+        classesList.appendChild(li);
+      });
+    }
+
+    function drawAllAnnotations(annotationsToDraw) {
+      const image = document.getElementById('labelingImage');
+      const canvas = document.getElementById('annotationsCanvas');
+      if (!image || !canvas || !image.naturalWidth) return;
+
+      const ctx = canvas.getContext('2d');
+      canvas.width = image.clientWidth;
+      canvas.height = image.clientHeight;
+      canvas.style.width = image.clientWidth + 'px';
+      canvas.style.height = image.clientHeight + 'px';
+
+      const imgRect = image.getBoundingClientRect();
+      const parentRect = image.parentElement.getBoundingClientRect();
+      canvas.style.left = (imgRect.left - parentRect.left) + 'px';
+      canvas.style.top = (imgRect.top - parentRect.top) + 'px';
+
+      const scaleX = canvas.width / image.naturalWidth;
+      const scaleY = canvas.height / image.naturalHeight;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      annotationsToDraw.forEach(ann => {
+        const box = ann.bbox ? ann.bbox : [ann.x_min, ann.y_min, ann.x_max, ann.y_max];
+        const x = box[0] * scaleX;
+        const y = box[1] * scaleY;
+        const width = (box[2] - box[0]) * scaleX;
+        const height = (box[3] - box[1]) * scaleY;
+        const label = ann.label || 'Unknown';
+        const color = ann.is_auto_generated ? '#f59e0b' : '#34D399';
+
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x, y, width, height);
+        ctx.font = '12px sans-serif';
+        const textMetrics = ctx.measureText(label);
+        ctx.fillStyle = color;
+        ctx.fillRect(x - 1, y - 17, textMetrics.width + 8, 16);
+        ctx.fillStyle = 'white';
+        ctx.textBaseline = 'top';
+        ctx.fillText(label, x + 3, y - 15);
+      });
+    }
+
+    function toggleLabelStatus() {
+      const btn = document.getElementById('labelStatusBtn');
+      const isActive = btn.classList.contains('bg-green-500');
+      const initialAnnotations = JSON.parse('{{ annotations_json|safe }}');
+
+      if (isActive) {
+        btn.classList.remove('bg-green-500');
+        btn.classList.add('bg-red-500');
+        btn.textContent = 'Label Assist 🔴';
+        drawAllAnnotations(initialAnnotations);
+        return;
+      }
+
+      btn.classList.remove('bg-red-500');
+      btn.classList.add('bg-green-500');
+      btn.textContent = 'Processing... ⏳';
+      btn.disabled = true;
+
+      fetch("{% url 'annotator:send_image' image.id %}", {
+        method: 'POST',
+        headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (!data.success) throw new Error(data.error || 'Unknown error');
+        return fetch("{% url 'annotator:get_result_json' image.id %}");
+      })
+      .then(res => res.json())
+      .then(newAnnotations => {
+        const allAnnotations = initialAnnotations.concat(newAnnotations);
+        drawAllAnnotations(allAnnotations);
+        updateSidebarClasses(allAnnotations);
+        btn.textContent = 'Label Assist 🟢';
+        btn.disabled = false;
+      })
+      .catch(err => {
+        alert('Failed processing image: ' + err.message);
+        btn.classList.remove('bg-green-500');
+        btn.classList.add('bg-red-500');
+        btn.textContent = 'Label Assist 🔴';
+        btn.disabled = false;
+      });
+    }
+
+    function finishAnnotation() {
+      if (!confirm('Finish this annotation and send it to reviewer?')) return;
+      fetch(`/annotator/finish-annotation/{{ image.id }}/`, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': '{{ csrf_token }}',
+          'Content-Type': 'application/json',
+        },
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          alert('Annotation marked finished and sent for review.');
+          location.reload();
+        } else {
+          alert(data.error || data.message || 'Failed to finish annotation');
+        }
+      })
+      .catch(() => alert('Network error occurred.'));
+    }
+
+    function runDrawing() {
+      const initialAnnotations = JSON.parse('{{ annotations_json|safe }}');
+      drawAllAnnotations(initialAnnotations);
+    }
+
+    window.addEventListener('load', () => {
+      const image = document.getElementById('labelingImage');
+      if (!image) return;
+      if (image.complete && image.naturalWidth > 0) {
+        runDrawing();
+      } else {
+        image.onload = runDrawing;
+      }
+      window.onresize = runDrawing;
+    });
+  </script>
+</body>
+</html>

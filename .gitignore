@@ -1,0 +1,67 @@
+# ============================================================
+# Anotasi Image — .gitignore
+# ============================================================
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info/
+build/
+dist/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+server_output.log
+staticfiles/
+Anotasi_Image/staticfiles/
+
+# Media uploads (user-uploaded files — biasanya gak masuk repo)
+# HAPUS baris di bawah kalau lu MAU commit sample media
+media/
+Anotasi_Image/media/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Editor / OS
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Backup / temp
+cookies.txt
+FETCH_HEAD
+FETCH_HEAD*
+*.bak
+*.tmp
+
+# Migrations — JANGAN ignore (harus commit)
+# migrations/
+
+# Jupyter
+.ipynb_checkpoints
