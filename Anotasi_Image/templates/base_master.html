@@ -1,124 +1,11 @@
-{% load static %}
-<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Home{% endblock %}</title>
+    <title>Home</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        /* =============================================================
-           SIDEBAR — METALLIC PURPLE (hitam → ungu → putih gradasi)
-           ============================================================= */
-        .sidebar-metallic {
-            background:
-                /* top highlight sheen */
-                linear-gradient(180deg,
-                    rgba(255, 255, 255, 0.08) 0%,
-                    rgba(255, 255, 255, 0)    15%,
-                    rgba(255, 255, 255, 0)    85%,
-                    rgba(0, 0, 0, 0.3)        100%),
-                /* diagonal metallic streak */
-                linear-gradient(135deg,
-                    #0a0a0f    0%,
-                    #1a0b2e   15%,
-                    #2e1065   28%,
-                    #4527A0   45%,
-                    #7c3aed   55%,
-                    #4527A0   68%,
-                    #2e1065   82%,
-                    #0a0a0f  100%);
-            background-size: 100% 100%, 100% 100%;
-            box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.08),
-                        4px 0 20px rgba(0, 0, 0, 0.25);
-        }
-
-        /* subtle texture overlay buat metallic feel */
-        .sidebar-metallic::before {
-            content: "";
-            position: absolute;
-            inset: 0;
-            pointer-events: none;
-            background:
-                repeating-linear-gradient(
-                    115deg,
-                    rgba(255, 255, 255, 0.02) 0px,
-                    rgba(255, 255, 255, 0.02) 1px,
-                    transparent 1px,
-                    transparent 3px);
-            border-radius: inherit;
-        }
-
-        /* Logo putih via CSS filter (biar logo berwarna jadi white) */
-        .logo-white {
-            filter: brightness(0) invert(1);
-        }
-
-        /* Nav link active/hover state */
-        .nav-link {
-            position: relative;
-            overflow: hidden;
-        }
-        .nav-link::before {
-            content: "";
-            position: absolute;
-            left: 0; top: 0; bottom: 0;
-            width: 3px;
-            background: linear-gradient(180deg, #c4b5fd, #7c3aed);
-            transform: scaleY(0);
-            transition: transform 0.2s ease;
-            border-radius: 0 3px 3px 0;
-        }
-        .nav-link:hover::before,
-        .nav-link.active::before {
-            transform: scaleY(1);
-        }
-        .nav-link.active {
-            background: linear-gradient(90deg, rgba(124, 58, 237, 0.35), rgba(124, 58, 237, 0.05));
-        }
-        .nav-link:hover {
-            background: rgba(255, 255, 255, 0.06);
-        }
-
-        /* Sub-menu styling */
-        .submenu {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease;
-        }
-        .submenu.open {
-            max-height: 500px;
-        }
-        .submenu-link {
-            position: relative;
-        }
-        .submenu-link::before {
-            content: "";
-            position: absolute;
-            left: 1.5rem;
-            top: 50%;
-            width: 6px;
-            height: 1px;
-            background: rgba(255, 255, 255, 0.3);
-        }
-        .submenu-link.active {
-            color: #e9d5ff;
-        }
-        .submenu-link.active::before {
-            background: #c4b5fd;
-            width: 10px;
-        }
-
-        /* Chevron rotate when submenu open */
-        .nav-link .chevron {
-            transition: transform 0.25s ease;
-        }
-        .nav-link.submenu-open .chevron {
-            transform: rotate(90deg);
-        }
-
-        /* Mobile responsive */
         @media (max-width: 768px) {
             .sidebar {
                 transform: translateX(-100%);
@@ -142,170 +29,76 @@
         }
         @media (min-width: 769px) {
             .content-area {
-                margin-left: 16rem;
+                margin-left: 16rem; /* 64 * 0.25rem = 16rem */
             }
+
             body.sidebar-collapsed .sidebar {
                 transform: translateX(-100%);
             }
+
             body.sidebar-collapsed .content-area {
                 margin-left: 0;
             }
-        }
-
-        /* Custom scrollbar buat nav area */
-        nav.sidebar-nav::-webkit-scrollbar { width: 4px; }
-        nav.sidebar-nav::-webkit-scrollbar-track { background: transparent; }
-        nav.sidebar-nav::-webkit-scrollbar-thumb {
-            background: rgba(196, 181, 253, 0.25);
-            border-radius: 4px;
-        }
-        nav.sidebar-nav::-webkit-scrollbar-thumb:hover {
-            background: rgba(196, 181, 253, 0.5);
         }
     </style>
 </head>
 <body class="h-screen bg-white overflow-hidden">
     <!-- Mobile Overlay -->
     <div id="overlay" class="overlay fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"></div>
-
+    
     <!-- Mobile Menu Button -->
-    <button id="mobile-menu-btn"
-            class="fixed top-4 left-4 z-50 text-white p-3 rounded-lg shadow-lg
-                   bg-gradient-to-br from-purple-700 to-purple-900 hover:shadow-xl transition">
+    <button id="mobile-menu-btn" class="fixed top-4 left-4 z-50 bg-[#4527A0] text-white p-3 rounded-lg shadow-lg">
         <i class="fas fa-bars text-xl"></i>
     </button>
 
-    <!-- ================== SIDEBAR ================== -->
-    <aside id="sidebar"
-           class="sidebar sidebar-metallic relative h-screen w-64 text-white fixed flex flex-col
-                  rounded-tr-[25px] rounded-br-[25px] z-50 md:z-30 overflow-hidden">
-
-        <!-- === HEADER: dual logos side by side === -->
-        <div class="relative flex items-center justify-center gap-4 px-4 py-5 border-b border-white/10">
-            <!-- Logo Anotasi (user uploaded) -->
-            <img src="{% static 'images/logo-anotasi.png' %}"
-                 alt="Anotasi Image"
-                 class="logo-white h-12 w-auto object-contain"
-                 onerror="this.style.display='none'">
-
-            <!-- Divider antara 2 logo -->
-            <span class="h-10 w-px bg-white/20"></span>
-
-            <!-- Logo Trisakti -->
-            <img src="{% static 'images/trisakti.png' %}"
-                 alt="Universitas Trisakti"
-                 class="logo-white h-12 w-auto object-contain"
-                 onerror="this.style.display='none'">
-
-            <!-- Close button (mobile only) -->
-            <button id="close-sidebar-btn"
-                    class="md:hidden absolute right-3 top-3 text-white/70 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition">
-                <i class="fas fa-times"></i>
+    <!-- Sidebar -->
+    <div id="sidebar" class="sidebar h-screen w-64 bg-[#4527A0] text-white fixed flex flex-col rounded-tr-[25px] rounded-br-[25px] z-50 md:z-30">
+        <!-- Close button for mobile -->
+        <div class="flex items-center justify-between h-20 border-b border-gray-700 px-4 md:justify-center">
+            <img src="/static/images/trisakti.png" alt="Logo Trisakti" class="h-12">
+            <button id="close-sidebar-btn" class="md:hidden text-white p-2">
+                <i class="fas fa-times text-xl"></i>
             </button>
         </div>
-
-        <!-- === NAVIGATION === -->
-        <nav class="sidebar-nav relative flex-1 px-3 py-5 space-y-1 overflow-y-auto">
-
-            <!-- Home -->
-            <a href="{% url 'master:home' %}"
-               class="nav-link block py-2.5 px-4 rounded-lg transition duration-200 flex items-center text-sm md:text-[15px]">
-                <i class="fas fa-home w-5 mr-3 text-purple-200"></i>
+        
+        <!-- Navigation -->
+        <nav class="flex-1 px-4 py-6 md:py-20 space-y-2 overflow-y-auto">
+            <a href="{% url 'master:home' %}" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-[#5E35B1] flex items-center text-base md:text-lg">
+                <i class="fas fa-home mr-3 text-lg md:text-xl"></i> 
                 <span class="truncate">Home</span>
             </a>
-
-            <!-- Assign Roles -->
-            <a href="{% url 'master:assign_roles' %}"
-               class="nav-link block py-2.5 px-4 rounded-lg transition duration-200 flex items-center text-sm md:text-[15px]">
-                <i class="fas fa-user-cog w-5 mr-3 text-purple-200"></i>
+            <a href="{% url 'master:assign_roles' %}" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-[#5E35B1] flex items-center text-base md:text-lg">
+                <i class="fas fa-user-cog mr-3 text-lg md:text-xl"></i> 
                 <span class="truncate">Assign Roles</span>
             </a>
-
-            <!-- Job Settings -->
-            <a href="{% url 'master:job_settings' %}"
-               class="nav-link block py-2.5 px-4 rounded-lg transition duration-200 flex items-center text-sm md:text-[15px]">
-                <i class="fas fa-cogs w-5 mr-3 text-purple-200"></i>
+            <a href="{% url 'master:job_settings' %}" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-[#5E35B1] flex items-center text-base md:text-lg">
+                <i class="fas fa-cogs mr-3 text-lg md:text-xl"></i> 
                 <span class="truncate">Job Settings</span>
             </a>
-
-            <!-- Issue Solving -->
-            <a href="{% url 'master:issue_solving' %}"
-               class="nav-link block py-2.5 px-4 rounded-lg transition duration-200 flex items-center text-sm md:text-[15px]">
-                <i class="fas fa-tools w-5 mr-3 text-purple-200"></i>
+            <a href="{% url 'master:issue_solving' %}" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-[#5E35B1] flex items-center text-base md:text-lg">
+                <i class="fas fa-tools mr-3 text-lg md:text-xl"></i> 
                 <span class="truncate">Issue Solving</span>
             </a>
-
-            <!-- Process Validation -->
-            <a href="{% url 'master:process_validations' %}"
-               class="nav-link block py-2.5 px-4 rounded-lg transition duration-200 flex items-center text-sm md:text-[15px]">
-                <i class="fas fa-check-circle w-5 mr-3 text-purple-200"></i>
+            <a href="{% url 'master:process_validations' %}" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-[#5E35B1] flex items-center text-base md:text-lg">
+                <i class="fas fa-check-circle mr-3 text-lg md:text-xl"></i> 
                 <span class="truncate">Process Validation</span>
             </a>
-
-            <!-- Performance (parent dengan submenu) -->
-            <div>
-                <button type="button"
-                        class="nav-link submenu-toggle w-full py-2.5 px-4 rounded-lg transition duration-200 flex items-center justify-between text-sm md:text-[15px]"
-                        data-target="submenu-performance">
-                    <span class="flex items-center">
-                        <i class="fas fa-chart-line w-5 mr-3 text-purple-200"></i>
-                        <span class="truncate">Performance</span>
-                    </span>
-                    <i class="fas fa-chevron-right chevron text-[10px] text-purple-200/70"></i>
-                </button>
-                <div id="submenu-performance" class="submenu pl-8 pr-2 mt-0.5 space-y-0.5">
-                    <a href="{% url 'master:performance' %}"
-                       class="submenu-link block py-2 px-4 rounded-md text-xs md:text-sm text-white/70 hover:text-white hover:bg-white/5 transition">
-                        Team Overview
-                    </a>
-                    <a href="#"
-                       class="submenu-link block py-2 px-4 rounded-md text-xs md:text-sm text-white/70 hover:text-white hover:bg-white/5 transition">
-                        Individual View
-                    </a>
-                </div>
-            </div>
-
-            <!-- Divider -->
-            <div class="h-px my-3 bg-gradient-to-r from-transparent via-white/15 to-transparent"></div>
-
-            <!-- Section label -->
-            <div class="px-4 pb-1 text-[10px] font-semibold uppercase tracking-wider text-purple-300/60">
-                System
-            </div>
-
-            <!-- Settings (example extra with submenu) -->
-            <div>
-                <button type="button"
-                        class="nav-link submenu-toggle w-full py-2.5 px-4 rounded-lg transition duration-200 flex items-center justify-between text-sm md:text-[15px]"
-                        data-target="submenu-settings">
-                    <span class="flex items-center">
-                        <i class="fas fa-sliders-h w-5 mr-3 text-purple-200"></i>
-                        <span class="truncate">Settings</span>
-                    </span>
-                    <i class="fas fa-chevron-right chevron text-[10px] text-purple-200/70"></i>
-                </button>
-                <div id="submenu-settings" class="submenu pl-8 pr-2 mt-0.5 space-y-0.5">
-                    <a href="#" class="submenu-link block py-2 px-4 rounded-md text-xs md:text-sm text-white/70 hover:text-white hover:bg-white/5 transition">
-                        Profile
-                    </a>
-                    <a href="#" class="submenu-link block py-2 px-4 rounded-md text-xs md:text-sm text-white/70 hover:text-white hover:bg-white/5 transition">
-                        Preferences
-                    </a>
-                </div>
-            </div>
+            <a href="{% url 'master:performance' %}" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-[#5E35B1] flex items-center text-base md:text-lg">
+                <i class="fas fa-chart-line mr-3 text-lg md:text-xl"></i> 
+                <span class="truncate">Performance</span>
+            </a>
         </nav>
-
-        <!-- === LOGOUT === -->
-        <div class="relative px-3 py-3 border-t border-white/10">
-            <a href="{% url 'master:logout' %}"
-               class="nav-link block py-2.5 px-4 rounded-lg transition duration-200 flex items-center text-sm md:text-[15px] text-red-200 hover:text-red-100">
-                <i class="fas fa-sign-out-alt w-5 mr-3"></i>
+        
+        <!-- Logout -->
+        <div class="px-4 py-4 md:py-6 border-t border-gray-700">
+            <a href="{% url 'master:logout' %}" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-[#5E35B1] flex items-center text-base md:text-lg">
+                <i class="fas fa-sign-out-alt mr-3 text-lg md:text-xl"></i> 
                 <span class="truncate">Logout</span>
             </a>
         </div>
-    </aside>
+    </div>
 
-    <!-- ================== MAIN CONTENT ================== -->
+    <!-- Main Content Area -->
     <div class="content-area flex-1 h-screen overflow-auto">
         <div class="p-4 md:p-6 lg:p-8 h-full">
             {% block content %}
@@ -313,7 +106,7 @@
         </div>
     </div>
 
-    <!-- ================== JS ================== -->
+    <!-- JavaScript for sidebar toggle -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const sidebar = document.getElementById('sidebar');
@@ -321,7 +114,9 @@
             const mobileMenuBtn = document.getElementById('mobile-menu-btn');
             const closeSidebarBtn = document.getElementById('close-sidebar-btn');
 
-            function isMobile() { return window.innerWidth < 769; }
+            function isMobile() {
+                return window.innerWidth < 769;
+            }
 
             function setDesktopSidebarState(collapsed) {
                 document.body.classList.toggle('sidebar-collapsed', collapsed);
@@ -335,6 +130,7 @@
                 }
             }
 
+            // Toggle sidebar
             mobileMenuBtn.addEventListener('click', function() {
                 if (isMobile()) {
                     sidebar.classList.add('open');
@@ -342,76 +138,40 @@
                     document.body.style.overflow = 'hidden';
                     return;
                 }
-                setDesktopSidebarState(!document.body.classList.contains('sidebar-collapsed'));
+
+                const willCollapse = !document.body.classList.contains('sidebar-collapsed');
+                setDesktopSidebarState(willCollapse);
             });
 
+            // Close sidebar functions
             function closeSidebar() {
                 sidebar.classList.remove('open');
                 overlay.classList.remove('show');
                 document.body.style.overflow = 'auto';
             }
+
+            // Close sidebar when close button clicked
             closeSidebarBtn.addEventListener('click', closeSidebar);
+
+            // Close sidebar when overlay clicked
             overlay.addEventListener('click', closeSidebar);
 
+            // Close sidebar when window is resized to desktop
             window.addEventListener('resize', function() {
                 if (window.innerWidth >= 768) {
                     closeSidebar();
                     applyDesktopSidebarPreference();
                 }
             });
+
+            // Handle escape key
             document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape' && window.innerWidth < 768) closeSidebar();
+                if (e.key === 'Escape' && window.innerWidth < 768) {
+                    closeSidebar();
+                }
             });
+
             applyDesktopSidebarPreference();
-
-            // ============================================
-            // SUBMENU TOGGLE
-            // ============================================
-            document.querySelectorAll('.submenu-toggle').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const targetId = this.getAttribute('data-target');
-                    const submenu = document.getElementById(targetId);
-                    if (!submenu) return;
-
-                    const isOpen = submenu.classList.toggle('open');
-                    this.classList.toggle('submenu-open', isOpen);
-
-                    // Save state
-                    const stateKey = 'submenu-' + targetId;
-                    localStorage.setItem(stateKey, isOpen ? '1' : '0');
-                });
-            });
-
-            // Restore submenu state on load
-            document.querySelectorAll('.submenu-toggle').forEach(btn => {
-                const targetId = btn.getAttribute('data-target');
-                const stateKey = 'submenu-' + targetId;
-                if (localStorage.getItem(stateKey) === '1') {
-                    const submenu = document.getElementById(targetId);
-                    if (submenu) {
-                        submenu.classList.add('open');
-                        btn.classList.add('submenu-open');
-                    }
-                }
-            });
-
-            // ============================================
-            // AUTO-HIGHLIGHT ACTIVE LINK based on URL
-            // ============================================
-            const currentPath = window.location.pathname;
-            document.querySelectorAll('.nav-link, .submenu-link').forEach(link => {
-                const href = link.getAttribute('href');
-                if (href && href !== '#' && currentPath.startsWith(href) && href !== '/') {
-                    link.classList.add('active');
-                    // Kalau submenu-link, juga buka parent submenu
-                    const parentSubmenu = link.closest('.submenu');
-                    if (parentSubmenu) {
-                        parentSubmenu.classList.add('open');
-                        const toggleBtn = document.querySelector(`[data-target="${parentSubmenu.id}"]`);
-                        if (toggleBtn) toggleBtn.classList.add('submenu-open');
-                    }
-                }
-            });
         });
     </script>
 
